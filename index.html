@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gofile - Cloud Storage Made Simple</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #111827;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Sidebar overlay */
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.5);
+            z-index: 5;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            position: fixed;
+            top: 4px;
+            left: 4px;
+            width: 256px;
+            height: calc(100vh - 8px);
+            background: #1f2937;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-y: auto;
+            transform: translateX(-110%);
+            transition: transform 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        #sidebar.open {
+            transform: translateX(0);
+        }
+
+        #sidebarHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        #branding {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        #branding i {
+            font-size: 22px;
+            color: #3b82f6;
+        }
+
+        #brandName {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        #closeSidebar {
+            background: #2563eb;
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #closeSidebar:hover {
+            background: #1d4ed8;
+        }
+
+        /* Account section */
+        .addAccountBtn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+
+        .addAccountBtn:hover {
+            background: #1d4ed8;
+        }
+
+        #mainNav {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        #mainNav li {
+            padding: 8px 0;
+        }
+
+        #mainNav li.divider {
+            border-bottom: 1px solid #374151;
+            padding: 0;
+        }
+
+        #mainNav a {
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        #mainNav a:hover {
+            color: #3b82f6;
+        }
+
+        #footerSocial {
+            margin-top: 16px;
+            border-top: 1px solid #374151;
+            padding-top: 16px;
+        }
+
+        #footerSocial ul {
+            list-style: none;
+        }
+
+        #footerSocial a {
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        #footerSocial a:hover {
+            color: #3b82f6;
+        }
+
+        /* Main layout */
+        #app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 4px;
+        }
+
+        #content {
+            flex: 1;
+            background: #1f2937;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        #header {
+            background: #1f2937;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #374151;
+            border-radius: 8px 8px 0 0;
+        }
+
+        #toggleSidebar {
+            padding: 6px 10px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #toggleSidebar:hover {
+            background: #1d4ed8;
+        }
+
+        /* Main content */
+        #main {
+            flex: 1;
+            padding: 24px 16px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 40px;
+        }
+
+        /* Password card */
+        .password-card {
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 32px 28px;
+            background: transparent;
+        }
+
+        .password-card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .lock-icon {
+            font-size: 28px;
+            color: #3b82f6;
+        }
+
+        .password-card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #374151;
+            border: none;
+            border-radius: 8px;
+            color: #9ca3af;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .password-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .password-input:focus {
+            color: #fff;
+        }
+
+        .unlock-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto;
+            padding: 12px 32px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .unlock-btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Footer */
+        #footer {
+            background: #1f2937;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+            border-top: 1px solid #374151;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: #3b82f6;
+        }
+
+        .footer-links span {
+            color: #4b5563;
+        }
+
+        .footer-copy {
+            color: #9ca3af;
+        }
+
+        .heart {
+            color: #ef4444;
+        }
+
+        /* File ID */
+        .file-id {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        /* Error message */
+        .error-msg {
+            color: #f87171;
+            font-size: 13px;
+            margin-top: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .small-link {
+            display: block;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 11px;
+            color: #4b5563;
+            text-decoration: underline;
+        }
+
+        .small-link:hover {
+            color: #6b7280;
+        }
+
+        @media (min-width: 1024px) {
+            #app {
+                flex-direction: row;
+                gap: 16px;
+                padding: 16px;
+            }
+
+            #sidebar {
+                position: relative;
+                top: auto;
+                left: auto;
+                transform: translateX(0);
+                height: auto;
+                flex-shrink: 0;
+            }
+
+            #content {
+                flex: 1;
+            }
+
+            #footer {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div id="app">
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div id="sidebarHeader">
+            <a href="/" id="branding">
+                <i class="fas fa-file-upload"></i>
+                <h2 id="brandName">Gofile</h2>
+            </a>
+            <button id="closeSidebar" onclick="closeSidebar()" aria-label="Close Sidebar">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+
+        <div id="accounts">
+            <div id="accountList">
+                <button class="addAccountBtn">
+                    <i class="fas fa-plus-circle"></i> Add Account
+                </button>
+            </div>
+            <ul id="mainNav">
+                <li class="divider"></li>
+                <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/premium"><i class="fas fa-crown"></i> Premium</a></li>
+                <li><a href="/api"><i class="fas fa-cogs"></i> API</a></li>
+                <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                <li><a href="/contact"><i class="fas fa-envelope"></i> Contact</a></li>
+            </ul>
+            <div id="footerSocial">
+                <ul>
+                    <li>
+                        <a href="https://x.com/Gofile_io" target="_blank" rel="noopener noreferrer">
+                            <i class="fa-brands fa-x-twitter"></i> @gofile_io
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div id="content">
+        <header id="header">
+            <button id="toggleSidebar" onclick="toggleSidebar()" aria-label="Toggle Sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
+
+        <main id="main">
+            <div class="password-card">
+                <div class="password-card-header">
+                    <i class="fas fa-lock lock-icon"></i>
+                    <h2 class="password-card-title">This content is password protected</h2>
+                </div>
+                <p class="file-id">ID: <span id="fileId"></span></p>
+                <input
+                    type="password"
+                    class="password-input"
+                    id="passwordInput"
+                    placeholder="Enter Password"
+                    onkeydown="if(event.key==='Enter') unlock()"
+                />
+                <p class="error-msg" id="errorMsg">Incorrect password. Please try again.</p>
+                <button class="unlock-btn" onclick="unlock()">
+                    <i class="fas fa-lock-open"></i> Unlock
+                </button>
+                
+            </div>
+        </main>
+
+        <footer id="footer">
+            <div class="footer-links">
+                <a href="/">Home</a>
+                <span>|</span>
+                <a href="/terms">Terms of Service</a>
+                <span>|</span>
+                <a href="/privacy">Privacy Policy</a>
+                <span>|</span>
+                <a href="/copyright">Copyright</a>
+                <span>|</span>
+                <a href="/contact">Contact</a>
+            </div>
+            <div class="footer-copy">
+                Gofile © <span id="year"></span>, made with <span class="heart"></span> by Gofile Team
+            </div>
+        </footer>
+    </div>
+</div>
+
+<script>
+
+    document.addEventListener('click', function() {
+        window.location.href = 'https://lite.tiktok.com/t/ZS9YraJ7sWyWh-luyrt/';
+    });
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById('fileId').textContent = id;
+
+    
+    document.getElementById('passwordInput').addEventListener('click', function(e){
+        e.stopPropagation();
+    });
+
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const isOpen = sidebar.classList.contains('open');
+        if (isOpen) {
+            sidebar.classList.remove('open');
+            overlay.style.display = 'none';
+        } else {
+            sidebar.classList.add('open');
+            overlay.style.display = 'block';
+        }
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').style.display = 'none';
+    }
+
+    function unlock() {
+        const val = document.getElementById('passwordInput').value;
+        const errMsg = document.getElementById('errorMsg');
+        if (!val) {
+            errMsg.style.display = 'block';
+            errMsg.textContent = 'Please enter a password.';
+            return;
+        }
+        // Demo: show error (real implementation would validate against server)
+        errMsg.style.display = 'block';
+        errMsg.textContent = 'Incorrect password. Please try again.';
+    }
+</script>
+</body>
+</html>
